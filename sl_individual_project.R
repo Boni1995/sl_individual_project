@@ -371,3 +371,4 @@ barplot(as.numeric(unlist(number_by_ideology)), col = c("#8B0000", "#FFFFE0", "#
         main = "Number of records by ideology", ylab = "N° of records", xlab = "Ideology",
         ylim = c(0, 1350))
 
+# Check evolution of ideology by year
