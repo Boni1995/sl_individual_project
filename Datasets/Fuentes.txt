@@ -1,3 +1,7 @@
+Paper cancer: https://ourworldindata.org/cancer
+
+Population: https://ourworldindata.org/grapher/population?tab=table&time=1934..latest
+
 Numero de personas con cancer 1990-2017: https://ourworldindata.org/grapher/number-of-people-with-cancer?tab=table
 
 Muertes por tipo de cancer por país 1990-2019: https://ourworldindata.org/grapher/total-cancer-deaths-by-type?tab=table
@@ -6,4 +10,8 @@ Muertes por cancer por edad: https 1990-2019://ourworldindata.org/grapher/cancer
 
 Human Development Index 1990 - 2021: https://ourworldindata.org/grapher/human-development-index?tab=table
 
-Helathcare public financing: https://ourworldindata.org/financing-healthcare
+Helathcare public financing:
+Option 1: https://ourworldindata.org/financing-healthcare
+Option 2: https://data.oecd.org/healthres/health-spending.htm
+
+Ideologies in power: https://www.bastianherre.com/data
