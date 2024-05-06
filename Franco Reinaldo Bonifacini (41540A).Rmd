@@ -1,0 +1,1326 @@
+---
+title: |
+  \LARGE \textbf{Behind the Curtain:}
+  \
+  \LARGE \textit{Political Ideologies and the Impact of Cancer}
+author: |
+  \Large \textbf{Franco Reinaldo Bonifacini (41540A)}
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: NO
+    number_sections: TRUE
+geometry: margin=0.5in
+---
+\newpage
+```{=latex}
+\setcounter{tocdepth}{3}
+\tableofcontents
+```
+\newpage
+# Abstract
+
+|   In our world, every political decision directly impacts the population. It's crucial to ascertain whether political parties truly represent their proclaimed ideologies. As people will never know what happens "behind the curtain", **this project may shed light on a more precise understanding of how policy decisions affect the population and their alignment with the ruling party's ideology**.
+
+|   Various datasets were utilized for analysis, employing cancer as a variable to assess the effectiveness of public health investment and its correlation with the ideology of the governing party.
+
+\fbox{\parbox{\linewidth}{\textbf{Keywords:} ideology, spending, health, cancer, hdi, unsupervised, supervised, cluster, regression}}
+
+## _Project's goal_
+|   With no intention of engaging in political discourse or ideologies, **the project aims to illustrate that the occurrence of cancer-related deaths correlates with factors such as investment in public health and the Human Development Index (HDI), rather than the messages conveyed by political parties**.
+
+|   In other words, **it is easy to preach with the word, but the world truly requires preaching thorugh the example**.
+
+|   For this project, a combination of **unsupervised and supervised learning techniques** was employed to analyze and comprehend how the variables fluctuate across different countries and ideologies.
+
+***
+# Data used
+
+## _Libraries_
+* **Data manipulation and transformation:**
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(outliers)
+```
+
+* **Reading and writing data:**
+```{r, warning=FALSE, message=FALSE}
+library(openxlsx)
+library(readxl)
+```
+
+* **Data visualization:**
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(ggthemes)
+library(ggcorrplot)
+library(rnaturalearth)
+library(gridExtra)
+library(hrbrthemes)
+library(viridis)
+library(factoextra)
+library(ggpubr)
+```
+
+\newpage
+* **Data analysis and statistics:**
+```{r, warning=FALSE, message=FALSE}
+library(proxy)
+library(cluster)
+library(clValid)
+library(corrplot)
+library(car)
+```
+
+* **Modeling and machine learning:**
+```{r, warning=FALSE, message=FALSE}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+```
+
+## _Datasets_
+|   To execute this project, several datasets were used:
+1. **death_cause:** The estimated annual number of deaths from each cause. _(Causes of death, 1990 to 2019 - Our World in Data)_.
+2. **population:** Population by country, available from 10,000 BCE to 2100, based on data and estimates from different sources. _(Population, 10,000 BCE to 2021 - Our World in Data)_.
+3. **n_cancer:** Total number of people suffering from any type of cancer at a given time. This is measured across both sexes, and all ages. _(Number of people with cancer, 1990 to 2017 - Our World in Data)_.
+4. **d_cancer_type:** Total annual number of deaths from cancers across all ages and both sexes, broken down by cancer type. _(Cancer deaths by type, 1990 to 2019 - Our World in Data)_.
+5. **d_cancer_age:** Total annual cancer deaths differentiated by age category across both sexes. Data includes all forms of cancer. _(Deaths from cancer, by age, 1990 to 2019 - Our World in Data)_.
+6. **health_spe:** This metric captures spending on government funded health care systems and social health insurance, as well as compulsory health insurance. _(Government health expenditure as a share of GDP, 1880 to 2021 - Our World in Data)_.
+7. **hd_index:** The Human Development Index (HDI) is a summary measure of key dimensions of human development: a long and healthy life, a good education, and a decent standard of living. Higher values indicate higher human development. _(Human Development Index, 1990 to 2022  - Our World in Data)_.
+8. **ideology:** Distinguishes between chief executives with leftist, centrist, rightist, and no discernible economic ideology. _(Identifying Ideologues: A Global Dataset on Chief Executives, 1945-2020 - Bastian Herre)_
+
+## _Data cleaning and processing_
+```{r, echo = F, results = 'hide'}
+#Load datasets
+death_cause <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\annual-number-of-deaths-by-cause.csv")
+population <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\population.csv")
+n_cancer <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\number-of-people-with-cancer.csv")
+d_cancer_type <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\total-cancer-deaths-by-type.csv")
+d_cancer_age <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\cancer-deaths-by-age.csv")
+health_spe <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\public-healthcare-spending-share-gdp.csv")
+hd_index <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\human-development-index.csv")
+ideology <- read.csv("C:\\Users\\franc\\Documents\\GitHub\\sl_individual_project\\Datasets\\global_leader_ideologies.csv")
+
+# Data cleaning and manipulation
+#Change column names
+colnames(death_cause) <- c("entity", "code", "year", "meningitis", "dementia", "parkinson", "nutri_deficiencies",
+                        "malaria", "drowning", "homicide", "maternal_disorders", "hiv", "drug_use_disorders",
+                        "tuberculosis", "cardiovascular_diseases", "respiratory_infections", "neonatal_disorders",
+                        "alcohol_use_disorders", "suicide", "natural_disasters", "diarrheal_diseases",
+                        "heat", "cancer", "terrorism", "diabetes", "kidney_diseases", "poisonings",
+                        "protein_energy_malnutri", "road_injuries", "respiratory_diseases", "liver_diseases",
+                        "digestive_diseases", "fire", "hepatitis", "measles")
+
+colnames(population) <- c("entity", "code", "year", "population")
+
+colnames(n_cancer) <- c("entity", "code", "year", "n_people")
+
+colnames(d_cancer_type) <- c("entity", "code", "year", "liver", "kidney", "lip_oral_cavity",
+                             "tracheal_bronch_lung", "larynx", "gallblad_biliary", "skin", "leukemia",
+                             "hodgkin", "myeloma", "others", "breast", "prostate", "thyroid", "stomach",
+                             "bladder", "uterine", "ovarian", "cervical", "brain_cns", "non_hodgkin",
+                             "pancreatic", "esophageal", "testicular", "nasopharynx", "other_pharynx",
+                             "colon_rectum", "non_melanoma_skin", "mesothelioma")
+
+colnames(d_cancer_age) <- c("entity", "code", "year", "age70_over", "age50_69", "age15_49", "age5_14", "under_5")
+
+colnames(health_spe) <- c("entity", "code", "year", "public_health_spe")
+
+colnames(hd_index) <- c("entity", "code", "year", "hdi")
+
+ideology <- ideology %>% 
+  rename(entity = country_name)
+
+# Define years to use
+define_year <- data.frame(
+  Dataset = c("death_cause","population","n_cancer", "d_cancer_type", "d_cancer_age", "health_spe", "hd_index", "ideology"),
+  Min = c(
+    min(death_cause$year),
+    min(population$year),
+    min(n_cancer$year),
+    min(d_cancer_type$year),
+    min(d_cancer_age$year),
+    min(health_spe$year),
+    min(hd_index$year),
+    min(ideology$year)
+  ),
+  Max = c(
+    max(death_cause$year),
+    max(population$year),
+    max(n_cancer$year),
+    max(d_cancer_type$year),
+    max(d_cancer_age$year),
+    max(health_spe$year),
+    max(hd_index$year),
+    max(ideology$year)
+  )
+)
+```
+
+|   Regarding the datasets mentioned earlier, apart from standardizing all of them with uniform column names, it was crucial to specify the range of years utilized. **It's essential to emphasize that incorporating data from multiple years does not signify that this project engaged in a time series analysis**. Rather, each entry was treated as an independent sample, regardless of the year.
+
+|   Therefore, the final dataset's range must be from the highest minimum year until the lowest maximum year, across all datasets. So, **the final range utilized is from 2000 to 2017**:
+
+```{r, echo = F}
+define_year
+```
+
+|   Following this, the subsequent step involved normalizing countries' names and their corresponding abbreviations (codes), thereby facilitating data integration. Consequently, **countries lacking a corresponding code were subsequently removed from the dataset**.
+
+|   Additionally, **all datasets were merged into a unified dataset (df_project)** , consolidating the information necessary for the project's objectives.
+
+```{r, echo = F, results = 'hide'}
+#Check country name and code
+country_name <- union(union(union(union(union(union(union(select(death_cause, entity), select(population, entity)),
+                                                    select(n_cancer, entity)), select(d_cancer_type, entity)),
+                                        select(d_cancer_age, entity)), select(health_spe, entity)),
+                            select(hd_index, entity)), select(ideology, entity))
+
+distinct(country_name)
+
+country_name_code <- left_join(country_name, d_cancer_type, by = "entity") %>%
+  mutate(code = ifelse(is.na(code), 0, code)) %>%
+  select(entity, code)
+
+country_name_fv <- distinct(country_name_code) # This is the final index
+
+code_na <-  subset(country_name_fv, code == 0)
+code_na # Checked in excel which are errors and need to be adjusted
+
+# Correction of countries
+
+country_corrections <- c("Czechia"="Czech Republic", "Czechoslovakia"="Czech Republic", "Burma/Myanmar"="Myanmar",
+                         "Democratic Republic of the Congo"="Democratic Republic of Congo",
+                         "Republic of Vietnam"="Vietnam", "Republic of the Congo"="Congo", "The Gambia"="Gambia",
+                         "Timor-Leste"="East Timor", "United States of America"="United States",
+                         "Ethiopia (former)"="Ethiopia", "Yemen Arab Republic"="Yemen",
+                         "Yemen People's Republic"="Yemen")
+
+death_cause$entity <- ifelse(death_cause$entity %in% names(country_corrections),
+                          country_corrections[death_cause$entity], death_cause$entity)
+
+population$entity <- ifelse(population$entity %in% names(country_corrections),
+                          country_corrections[population$entity], population$entity)
+
+n_cancer$entity <- ifelse(n_cancer$entity %in% names(country_corrections),
+                          country_corrections[n_cancer$entity], n_cancer$entity)
+
+d_cancer_type$entity <- ifelse(d_cancer_type$entity %in% names(country_corrections),
+                        country_corrections[d_cancer_type$entity], d_cancer_type$entity)
+
+d_cancer_age$entity <- ifelse(d_cancer_age$entity %in% names(country_corrections),
+                       country_corrections[d_cancer_age$entity], d_cancer_age$entity)
+
+health_spe$entity <- ifelse(health_spe$entity %in% names(country_corrections),
+                     country_corrections[health_spe$entity], health_spe$entity)
+
+hd_index$entity <- ifelse(hd_index$entity %in% names(country_corrections),
+                   country_corrections[hd_index$entity], hd_index$entity)
+
+ideology$entity <- ifelse(ideology$entity %in% names(country_corrections),
+                  country_corrections[ideology$entity], ideology$entity)
+
+# Create again the country index
+country_list <- union(union(union(union(union(union(union(select(death_cause, entity), select(population, entity)),
+                                                    select(n_cancer, entity)), select(d_cancer_type, entity)),
+                                        select(d_cancer_age, entity)), select(health_spe, entity)),
+                            select(hd_index, entity)), select(ideology, entity))
+distinct(country_list)
+
+country_index_base <- left_join(country_list, d_cancer_type, by = "entity") %>%
+  mutate(code = ifelse(is.na(code), 0, code)) %>%
+  select(entity, code)
+
+country_index <- distinct(country_index_base) # This is the final index
+
+# Delete from index those countries with no code because are not countries or countries that lack data
+country_index <- subset(country_index, !(country_index$code == 0 | country_index$code == ""))
+
+country_index
+
+# Create final dataset for the project
+years <- 2000:2017 # Vector with years to analyse
+
+df_project <- expand.grid(entity = country_index$entity, year = years) # Create a row of country by year
+
+df_project <- merge(df_project, country_index, by.x = "entity", by.y = "entity") # Add again the country code
+
+df_project <- df_project[, c("entity", "code", "year")] # Reorder columns
+```
+
+|   Finally, some additional variables were calculated:
+1. **cancer_affection_rate:** people with cancer / population.
+2. **cancer_death_rate:** deaths by cancer / total deaths.
+3. **Rate of deaths by cancer, by age:** deaths by range of age / total deaths by cancer.
+4. **Rate of deaths by cancer, by type:** deaths by type of cancer / total deaths by cancer.
+
+```{r, echo=F}
+# Calculate the rate of people with cancer by year
+n_cancer <- merge(n_cancer, population, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "n_people", "population")
+
+n_cancer$cancer_affection_rate <- n_cancer$n_people/n_cancer$population
+
+# Add the rate of cancer as death cause
+dc_numeric <- death_cause[, 4:ncol(death_cause)]
+dcause_sum <- rowSums(dc_numeric)
+death_cause$total_sum <- dcause_sum
+death_cause$cancer_death_rate <- death_cause$cancer/death_cause$total_sum
+
+# Add the rate of cancer deaths by age
+dage_numeric <- d_cancer_age[, 4:ncol(d_cancer_age)]
+sum_by_age <- rowSums(dage_numeric)
+d_cancer_age$total_sum <- sum_by_age
+d_cancer_age$rate_70_over <- d_cancer_age$age70_over/d_cancer_age$total_sum
+d_cancer_age$rate_50_69 <- d_cancer_age$age50_69/d_cancer_age$total_sum
+d_cancer_age$rate_15_49 <- d_cancer_age$age15_49/d_cancer_age$total_sum
+d_cancer_age$rate_5_14 <- d_cancer_age$age5_14/d_cancer_age$total_sum
+d_cancer_age$rate_under_5 <- d_cancer_age$under_5/d_cancer_age$total_sum
+
+# Add the rate of cancer death by type
+dtype_numeric <- d_cancer_type[, 4:ncol(d_cancer_type)]
+sum_by_type <- rowSums(dtype_numeric)
+d_cancer_type$total_sum <- sum_by_type
+d_cancer_type$rate_liver <- d_cancer_type$liver/d_cancer_type$total_sum
+d_cancer_type$rate_kidney <- d_cancer_type$kidney/d_cancer_type$total_sum
+d_cancer_type$rate_lip_oral_cavity <- d_cancer_type$lip_oral_cavity/d_cancer_type$total_sum
+d_cancer_type$rate_tracheal_bronch_lung <- d_cancer_type$tracheal_bronch_lung/d_cancer_type$total_sum
+d_cancer_type$rate_larynx <- d_cancer_type$larynx/d_cancer_type$total_sum
+d_cancer_type$rate_gallblad_biliary <- d_cancer_type$gallblad_biliary/d_cancer_type$total_sum
+d_cancer_type$rate_skin <- d_cancer_type$skin/d_cancer_type$total_sum
+d_cancer_type$rate_leukemia <- d_cancer_type$leukemia/d_cancer_type$total_sum
+d_cancer_type$rate_hodgkin <- d_cancer_type$hodgkin/d_cancer_type$total_sum
+d_cancer_type$rate_myeloma <- d_cancer_type$myeloma/d_cancer_type$total_sum
+d_cancer_type$rate_others <- d_cancer_type$others/d_cancer_type$total_sum
+d_cancer_type$rate_breast <- d_cancer_type$breast/d_cancer_type$total_sum
+d_cancer_type$rate_prostate <- d_cancer_type$prostate/d_cancer_type$total_sum
+d_cancer_type$rate_thyroid <- d_cancer_type$thyroid/d_cancer_type$total_sum
+d_cancer_type$rate_stomach <- d_cancer_type$stomach/d_cancer_type$total_sum
+d_cancer_type$rate_bladder <- d_cancer_type$bladder/d_cancer_type$total_sum
+d_cancer_type$rate_uterine <- d_cancer_type$uterine/d_cancer_type$total_sum
+d_cancer_type$rate_ovarian <- d_cancer_type$ovarian/d_cancer_type$total_sum
+d_cancer_type$rate_cervical <- d_cancer_type$cervical/d_cancer_type$total_sum
+d_cancer_type$rate_brain_cns <- d_cancer_type$brain_cns/d_cancer_type$total_sum
+d_cancer_type$rate_non_hodgkin <- d_cancer_type$non_hodgkin/d_cancer_type$total_sum
+d_cancer_type$rate_pancreatic <- d_cancer_type$pancreatic/d_cancer_type$total_sum
+d_cancer_type$rate_esophageal <- d_cancer_type$esophageal/d_cancer_type$total_sum
+d_cancer_type$rate_testicular <- d_cancer_type$testicular/d_cancer_type$total_sum
+d_cancer_type$rate_nasopharynx <- d_cancer_type$nasopharynx/d_cancer_type$total_sum
+d_cancer_type$rate_other_pharynx <- d_cancer_type$other_pharynx/d_cancer_type$total_sum
+d_cancer_type$rate_colon_rectum <- d_cancer_type$colon_rectum/d_cancer_type$total_sum
+d_cancer_type$rate_non_melanoma_skin <- d_cancer_type$non_melanoma_skin/d_cancer_type$total_sum
+d_cancer_type$rate_mesothelioma <- d_cancer_type$mesothelioma/d_cancer_type$total_sum
+
+# Add all the variables calculated to the final dataset (ds_project)
+
+df_project <- merge(df_project, ideology, by = c("entity", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology") # Add ideology
+
+df_project <- merge(df_project, n_cancer, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology", "cancer_affection_rate") # Add the affection rate
+
+df_project <- merge(df_project, death_cause, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology", "cancer_affection_rate", "cancer_death_rate") # Add the rate of cancer deaths
+
+df_project <- merge(df_project, d_cancer_age, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology", "cancer_affection_rate", "cancer_death_rate",
+         "rate_under_5", "rate_5_14", "rate_15_49", "rate_50_69", "rate_70_over") # Add the rate of cancer deaths by age
+
+df_project <- merge(df_project, d_cancer_type, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology", "cancer_affection_rate", "cancer_death_rate",
+         "rate_under_5", "rate_5_14", "rate_15_49", "rate_50_69", "rate_70_over", "rate_liver",
+         "rate_kidney", "rate_lip_oral_cavity", "rate_tracheal_bronch_lung", "rate_larynx",
+         "rate_gallblad_biliary", "rate_skin", "rate_leukemia", "rate_hodgkin", "rate_myeloma",
+         "rate_others", "rate_breast", "rate_prostate", "rate_thyroid", "rate_stomach", "rate_bladder",
+         "rate_uterine", "rate_ovarian", "rate_cervical", "rate_brain_cns", "rate_non_hodgkin",
+         "rate_pancreatic", "rate_esophageal", "rate_testicular", "rate_nasopharynx", "rate_other_pharynx",
+         "rate_colon_rectum", "rate_non_melanoma_skin", "rate_mesothelioma") # Add the rate of cancer deaths by type
+
+df_project <- merge(df_project, health_spe, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology", "cancer_affection_rate", "cancer_death_rate",
+         "rate_under_5", "rate_5_14", "rate_15_49", "rate_50_69", "rate_70_over", "rate_liver",
+         "rate_kidney", "rate_lip_oral_cavity", "rate_tracheal_bronch_lung", "rate_larynx",
+         "rate_gallblad_biliary", "rate_skin", "rate_leukemia", "rate_hodgkin", "rate_myeloma",
+         "rate_others", "rate_breast", "rate_prostate", "rate_thyroid", "rate_stomach", "rate_bladder",
+         "rate_uterine", "rate_ovarian", "rate_cervical", "rate_brain_cns", "rate_non_hodgkin",
+         "rate_pancreatic", "rate_esophageal", "rate_testicular", "rate_nasopharynx", "rate_other_pharynx",
+         "rate_colon_rectum", "rate_non_melanoma_skin", "rate_mesothelioma",
+         "public_health_spe") # Add the public health expenditure
+
+df_project <- merge(df_project, hd_index, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "hog_ideology", "cancer_affection_rate", "cancer_death_rate",
+         "rate_under_5", "rate_5_14", "rate_15_49", "rate_50_69", "rate_70_over", "rate_liver",
+         "rate_kidney", "rate_lip_oral_cavity", "rate_tracheal_bronch_lung", "rate_larynx",
+         "rate_gallblad_biliary", "rate_skin", "rate_leukemia", "rate_hodgkin", "rate_myeloma",
+         "rate_others", "rate_breast", "rate_prostate", "rate_thyroid", "rate_stomach", "rate_bladder",
+         "rate_uterine", "rate_ovarian", "rate_cervical", "rate_brain_cns", "rate_non_hodgkin",
+         "rate_pancreatic", "rate_esophageal", "rate_testicular", "rate_nasopharynx", "rate_other_pharynx",
+         "rate_colon_rectum", "rate_non_melanoma_skin", "rate_mesothelioma",
+         "public_health_spe", "hdi") # Add the human development index
+```
+
+```{r, echo=F}
+# NAs in ideology are because there is no information available, so are deleted from final df
+# All cases are countries which have no information in any year
+df_project <- df_project[!is.na(df_project$hog_ideology),]
+
+# Delete those with no information all years (Bahamas, Belize, Brunei, Jordan, Libya, Qatar)
+df_project <- subset(df_project, !(entity %in% c("Bahamas", "Belize", "Brunei", "Jordan", "Libya", "Qatar")))
+
+# Delete from df_project North Korea, Somalia and Taiwan because there is no information of public spending and hdi variables
+df_project <- subset(df_project, !(entity %in% c("North Korea", "Somalia", "Taiwan")))
+
+# Although the countries are important, the idea of the project is to analyze ideology and public spending/cancer/HDI. Also, the NAs in public_health_spe and hdi is of around 1%, so is preferable to delete them rather than replacing with mean or other value
+df_project <- df_project[!is.na(df_project$public_health_spe),]
+df_project <- df_project[!is.na(df_project$hdi),]
+
+# Deleting all "no information", "none", or "not applicable" as it won't affect the project objective, and after some investigations, there were a lot of wars, doubts, independent governors, etc, that makes impossible to assume the ideology of those years. There are also cases of countries that were founded later or get the independence. The dataset is really detailed and makes no sense to assume ideologies in these cases.
+
+df_project <- df_project[!(df_project$hog_ideology == "no information"),]
+df_project <- df_project[!(df_project$hog_ideology == "none"),]
+df_project <- df_project[!(df_project$hog_ideology == "not applicable"),]
+```
+
+|   As a result, **df_project** contains the following information:
+
+```{r, echo=F}
+cat("Countries included:", length(unique(df_project$entity)))
+
+str(df_project)
+```
+
+\newpage
+## _Exploratory Data Analysis_
+|   Before proceeding with unsupervised and supervised techniques, **exploratory data analysis (EDA)** was undertaken to identify **trends and potential outcomes**.
+
+```{r, echo=F, fig.width=10, fig.height=8, fig.align='center', fig.cap="Each barplot compares the different variables among ideologies, where the red bar represents the leftists parties, the white bar represents the centrists parties, and the blue bar represents the rightists parties."}
+
+par(mfrow=c(2, 2))
+
+# Number of cases by ideology
+number_by_ideology <- data.frame(
+  Left = sum(df_project$hog_ideology == "leftist"),
+  Center = sum(df_project$hog_ideology == "centrist"),
+  Right = sum(df_project$hog_ideology == "rightist"))
+
+ideology_numbers <- barplot(as.numeric(unlist(number_by_ideology)), col = c("coral1", "#FFFFE0", "cornflowerblue"),
+                            names.arg= c("Left", "Center", "Right"), cex.names=0.75,
+                            main = "Number of Cases by Ideology", ylab = "N° of records",
+                            xlab = "Ideology", ylim = c(0, 1400))
+
+text(ideology_numbers, y = number_by_ideology-100, paste(unlist(number_by_ideology), sep = ""), cex = 1, col = "black")
+
+plot_limits <- par("usr")
+rect(plot_limits[1], plot_limits[3], plot_limits[2], plot_limits[4], border = "black", lwd = 2)
+
+
+# Public Health Spending by ideology
+spe_by_ideology <- data.frame(
+  Left = mean(df_project$public_health_spe[df_project$hog_ideology == "leftist"]),
+  Center = mean(df_project$public_health_spe[df_project$hog_ideology == "centrist"]),
+  Right = sum(mean(df_project$public_health_spe[df_project$hog_ideology == "rightist"])))
+
+ideology_spe <- barplot(as.numeric(unlist(spe_by_ideology)), col = c("coral1", "#FFFFE0", "cornflowerblue"),
+                        names.arg= c("Left", "Center", "Right"), cex.names=0.75,
+                        main = "Avg. Spending in Public Health by Ideology",
+                        ylab = "Public Health Spending (% from GPD)", xlab = "Ideology", ylim=c(0,
+                                                                                                3.75))
+text(ideology_spe, y = unlist(spe_by_ideology) - 0.15, round(unlist(spe_by_ideology), 2),
+          col = "black")
+
+plot_limits <- par("usr")
+rect(plot_limits[1], plot_limits[3], plot_limits[2], plot_limits[4], border = "black", lwd = 2)
+
+
+# Cancer Death Rate by ideology
+cdeath_by_ideology <- data.frame(
+  Left = mean(df_project$cancer_death_rate[df_project$hog_ideology == "leftist"]),
+  Center = mean(df_project$cancer_death_rate[df_project$hog_ideology == "centrist"]),
+  Right = sum(mean(df_project$cancer_death_rate[df_project$hog_ideology == "rightist"])))
+
+ideology_cdeath <- barplot(as.numeric(unlist(cdeath_by_ideology)), col = c("coral1", "#FFFFE0", "cornflowerblue"),
+                           names.arg= c("Left", "Center", "Right"), cex.names=0.75,
+                           main = "Avg. Cancer Death Rate by Ideology",
+                           ylab = "Cancer Death Rate", xlab = "Ideology", ylim = c(0, 0.25))
+
+text(ideology_cdeath, y = unlist(cdeath_by_ideology) - 0.01, labels = round(unlist(cdeath_by_ideology), 2), col = "black")
+
+plot_limits <- par("usr")
+rect(plot_limits[1], plot_limits[3], plot_limits[2], plot_limits[4], border = "black", lwd = 2)
+
+
+# HDI
+hdi_by_ideology <- data.frame(
+  Left = mean(df_project$hdi[df_project$hog_ideology == "leftist"]),
+  Center = mean(df_project$hdi[df_project$hog_ideology == "centrist"]),
+  Right = sum(mean(df_project$hdi[df_project$hog_ideology == "rightist"])))
+
+ideology_hdi <- barplot(as.numeric(unlist(hdi_by_ideology)), col = c("coral1", "#FFFFE0", "cornflowerblue"),
+                        names.arg= c("Left", "Center", "Right"), cex.names=0.75,
+                        main = "Avg. HDI by Ideology", ylab = "HDI", xlab = "Ideology", ylim=c(0, 0.8))
+
+text(ideology_hdi, y = unlist(hdi_by_ideology) - 0.05, labels = round(unlist(hdi_by_ideology), 2),
+     col = "black")
+
+plot_limits <- par("usr")
+rect(plot_limits[1], plot_limits[3], plot_limits[2], plot_limits[4], border = "black", lwd = 2)
+```
+
+|   It is pertinent to note in **_figure 1_** that there is a comparable number of records for both left-wing and right-wing parties, whereas centrist parties exhibit significantly fewer records in the dataset.
+
+|   Additionally, it's clear that **there aren't significant differences between ideologies** regarding public health spending, cancer-related deaths, and HDI. This **aligns with the project's goal** that health investment and improvement depend on factors beyond the governing political party.
+
+|   On the other hand, both cancer by age and by type were analyzed to decide some manipulation before implementing the techniques:
+
+\newpage
+```{r, echo=F, fig.height=3, fig.align='center', fig.cap="Type of cancers. This boxplot displays how cancer deaths are distributed across different types."}
+boxplot(df_project[,12:40],
+        ylab = "Percentage of deaths",
+        las = 2,
+        col=rainbow(29),
+        cex.axis = 0.6,
+        border = "black")
+```
+
+|   According to the **World Health Organization (WHO)**, and aligned with the results of **_figure 2_**, the main cancer deaths are from **lungs, breast, rectal, prostate and stomach**.
+
+```{r, echo=F, fig.height=3, fig.align='center', fig.cap="Death from cancer by range of age. This density plot displays how cancer deaths are distributed across range of age."}
+ggplot(data = df_project) +
+  geom_density(aes(x = rate_under_5, fill = "rate_under_5"), alpha = 0.4) +
+  geom_density(aes(x = `rate_5_14`, fill = "rate_5_14"), alpha = 0.4) +
+  geom_density(aes(x = `rate_15_49`, fill = "rate_15_49"), alpha = 0.4) +
+  geom_density(aes(x = `rate_50_69`, fill = "rate_50_69"), alpha = 0.4) +
+  geom_density(aes(x = `rate_70_over`, fill = "rate_70_over"), alpha = 0.4) +
+  scale_fill_manual(values = c("red", "aquamarine", "chartreuse", "purple", "black")) +
+  labs(x = "Sample percentage",
+       y = "Density",
+       fill = "Age ranges")
+```
+
+|   Considering the findings of **_figure 3_**, it is evident that there are **elevated rates of cancer-related deaths among individuals aged 50 and above**, ranging from 25% to 55%. In contrast, the age group of **15 to 49 years exhibits lower levels of mortality**, ranging from 5% to 20%. In summary, **younger age groups tend to have a lower likelihood of dying from cancer**.
+
+|   These findings hold significance as they could be used in the future, for the implementation of the unsupervised and supervised techniques.
+
+\newpage
+|   Last but not least, some **maps were plotted** to add more detail to this first approach. In this case, a map was filled with the different variables (ideology, cancer deaths, public health spending and HDI):
+```{r, echo=F}
+# World map base
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+map_corrections <- c("Cabo Verde"="Cape Verde", "Republic of the Congo"="Congo", "Czechia"="Czech Republic",
+                     "Democratic Republic of the Congo"="Democratic Republic of Congo",
+                     "SÃ£o TomÃ© and Principe"="Sao Tome and Principe", "Republic of Serbia"="Serbia",
+                     "United Republic of Tanzania"="Tanzania", "United States of America"="United States")
+
+world$sovereignt <- ifelse(world$sovereignt %in% names(map_corrections),
+                           map_corrections[world$sovereignt], world$sovereignt)
+
+# Final df for map
+df_map <- df_project[,c(1,4:6,41:42)]
+df_map$hog_ideology_numeric <- ifelse(df_map$hog_ideology == "leftist", -1,
+                                          ifelse(df_map$hog_ideology == "rightist", 1, 0))
+```
+
+```{r, echo=F}
+# Ideology map
+ideology_map <- df_map[,c(1,7)]
+ideology_map <- aggregate(hog_ideology_numeric ~ entity, data = ideology_map, FUN = mean)
+final_map_ideology <- merge(world, ideology_map, by.x = "sovereignt", by.y = "entity", all.x = TRUE)
+
+# Cancer death map
+cancerdeath_map <- df_map[,c(1,4)]
+cancerdeath_map <- aggregate(cancer_death_rate ~ entity, data = cancerdeath_map, FUN = mean)
+death_cancer_map <- merge(world, cancerdeath_map, by.x = "sovereignt", by.y = "entity", all.x = TRUE)
+
+# Public Health Spending map
+public_spe_map <- df_map[,c(1,5)]
+public_spe_map <- aggregate(public_health_spe ~ entity, data = public_spe_map, FUN = mean)
+final_pspe_map <- merge(world, public_spe_map, by.x = "sovereignt", by.y = "entity", all.x = TRUE)
+
+# HDI
+hdi_map <- df_map[,c(1,6)]
+hdi_map <- aggregate(hdi ~ entity, data = hdi_map, FUN = mean)
+final_hdi_map <- merge(world, hdi_map, by.x = "sovereignt", by.y = "entity", all.x = TRUE)
+```
+
+```{r, echo=F, fig.width=10, fig.height=4, fig.align='center', fig.cap="Anual average ideology. The red color represents leftists parties, while the blue color represents rightists parties."}
+# Ideology map
+ggplot(final_map_ideology, aes(fill = hog_ideology_numeric)) +
+  geom_sf() +
+  scale_fill_gradient(low = "coral1", high = "cornflowerblue", name = "Avg. ideology", limits = c(-1, 1))
+```
+
+|   In **_figure 4_**, it is evident that **South America, China, and Africa** are regions primarily governed by **left-leaning administrations**, whereas **North America, Europe, and Australia** are predominantly governed by **right-leaning administrations**. In the case of Asia, there appears to be a mixture of ideologies.
+
+```{r, echo=F, fig.width=10, fig.height=4, fig.align='center', fig.cap="Anual average death by cancer (% from total deaths). The green color represents a low percentage of deaths by cancer, while the darkred color represents a high percentage of deaths by cancer."}
+# Cancer death map
+ggplot(death_cancer_map, aes(fill = cancer_death_rate)) +
+  geom_sf() +
+  scale_fill_gradient(low = "green", high = "darkred", name = "Percentage")
+```
+
+|   Regarding the **_figure 5_**, it is evident that, on average, there is a prevalence of **more than 2% of deaths attributed to cancer**, with the exception of Africa. The low incidence of cancer-related deaths in Africa presents a unique case warranting further investigation. It is likely that the causes of death in this continent are predominantly represented by other factors, such as communicable diseases, maternal, perinatal, and nutritional conditions, as indicated by the World Health Organization (WHO).
+
+\newpage
+```{r, echo=F, fig.width=10, fig.height=4, fig.align='center', fig.cap="Anual average public health spending (% from GDP). The green color represents a high level of public health spending, while the darkred color represents a low level of public health spending."}
+# Public Health Spending map
+ggplot(final_pspe_map, aes(fill = public_health_spe)) +
+  geom_sf() +
+  scale_fill_gradient(low = "darkred", high = "green", name = "Percentage")
+```
+
+```{r, echo=F, fig.width=10, fig.height=4, fig.align='center', fig.cap="Anual average HDI. The green color represents a high level of HDI, while the darkred color represents a low level of HDI."}
+# HDI
+ggplot(final_hdi_map, aes(fill = hdi)) +
+  geom_sf() +
+  scale_fill_gradient(low = "darkred", high = "green", name = "Index (0-1)")
+```
+
+|   Finally, considering **_figure 6_** and **_figure 7_**, it is evident that both metrics are notably higher in North America, Europe, and Australia. In this instance, this observation may seemingly **contradict the project's objective**, as these regions were predominantly governed by right-leaning administrations.
+
+***
+
+\newpage
+# Unsupervised Learning
+
+|   In this section, all **unsupervised learning techniques** and their corresponding results are presented to provide further clarity on how the original hypothesis is supported.
+
+|   Before applying any method, some manipulation was done:
+1. A new column was added to the dataset to assign numerical values to the ideologies (**_hog_ideology_numeric_**). **Leftist-led governments were represented with -1, centrists with 0, and rightist with 1**.
+
+```{r, echo=F}
+df_project$hog_ideology_numeric <- ifelse(df_project$hog_ideology == "leftist", -1,
+                                          ifelse(df_project$hog_ideology == "rightist", 1, 0))
+```
+2. For the unsupervised learning were only used the following variables: **cancer_affection_rate, cancer_death_rate, public_health_spe, hdi, hog_ideology**.
+
+|   After this modifications, the new dataset was called **df_cluster** and variables were **standardized**:
+```{r, echo=F}
+df_cluster <- df_project[ , c("code", "cancer_affection_rate", "cancer_death_rate",
+                              "public_health_spe", "hdi", "hog_ideology_numeric")]
+df_cluster <- aggregate(. ~ code, data = df_cluster, FUN = mean)
+df_cluster_stand <- scale(df_cluster[,c(2:6)])  # To standarize the variables
+```
+```{r, echo=F}
+summary(df_cluster_stand)
+```
+
+|  Taking into account this updated dataset, a heatmap was generated to visualize the **correlations between each variable** and to identify any potential multicollinearity that needs to be addressed.
+```{r, echo=F, fig.width=10, fig.height=5, fig.align='center', fig.cap="Correlation Heatmap. This heatmap illustrates the correlation levels between all variables in the dataset, ranging from -1 (indicating negative correlation) to 1 (indicating positive correlation)."}
+corr_matrix <- cor(df_cluster %>% dplyr::select_if(is.numeric))
+
+ggcorrplot(corr_matrix, type = "lower", outline.color = "white", lab = TRUE,
+           colors = c("darkred","#FFFFE0","darkblue"))
+```
+
+|   Regarding the results in **_figure 8_**, it's evident that there is a **high correlation among all variables**, except for the ideology (hog_ideology_numeric). To mitigate this issue, a **Principal Component Analysis (PCA)** technique was employed to **reduce the dimensionality of the dataset, thus mitigating the multicollinearity** that may affect the analysis results.
+
+## _Principal Component Analysis (PCA)_
+|   To understand this technique, some key points of PCA need to be explained:
+* Firstly, **principal components** are new variables derived from a transformation of the original data, resulting in uncorrelated (orthogonal) components.
+* Secondly, each principal component possesses an **eigenvalue**, which denotes a value associated with the variance and indicates how much of the dataset's variance is accounted for by that component.
+* Thirdly, using this values is helpful to determine the number of components suitable for analysis. Typically, **those are the principal components that collectively explain nearly 80% of the variance**.
+```{r, echo=F}
+# Table with proportion of variance and cumulative variance
+pca_base<-princomp(df_cluster[, c(2:6)], cor=TRUE)
+summary(pca_base)
+```
+
+```{r, echo=F, fig.width=10, fig.height=5, fig.align='center', fig.cap="Principal Components. These plots show how much of the dataset’s variance is accounted for by each component."}
+par(mfrow=c(1, 2))
+# Plot the optimal number of components to use
+autoval <- eigen(corr_matrix)
+
+plot(autoval$values, type="b", xlab="Number of Component", ylab="Eigenvalues")
+abline(h=1, lwd=3, col="darkred")
+
+# Additional plot that shows exactly how much of the cumulative variance is explained by each component
+pca_var <- pca_base$sdev^2
+prop_var <- pca_var/sum(pca_var)
+
+screeplot(pca_base, col = "lightblue", main=NULL)
+lines(cumsum(prop_var), col = "darkred", lwd = 2, type = 'b')
+text(seq_along(prop_var), cumsum(prop_var), labels = paste(round((cumsum(prop_var)*100),2), "%"),
+     pos = 1, col = "black")
+```
+
+|   As mentioned before with the PCA's theoretic explanation, the principal components to use are those that explain at least the 80% of the variance, so in this case the components used were:
+* **Component 1** which explains 69,96% of the variance.
+* **Component 2** which explains 19,37% of the variance, and combined with the first one, they explain the 89,34% of the dataset's variance.
+
+|   In addition to the table, **_figure 9_** also supports the idea that the **optimal number of principal components to use are 2**, so for the project, the component 1 and 2 were used for the unsupervised techniques.
+
+|   Furthermore, concerning PCA, **each component represents the original variables of the dataset**. This is a crucial point because the components were utilized instead of the original variables for the techniques. Thus, understanding which variables are explained by each component is a key step in the process.
+
+```{r, echo=F}
+loadings <- pca_base$loadings
+loadings[, 1:2]
+```
+
+```{r, echo=F, fig.height=5, fig.align='center', fig.cap="Variables and Principal Components. This plot illustrates how variables are affected by each component."}
+
+# Original variables
+fviz_pca_var(pca_base, col.var = "black", repel = -5)
+```
+
+|   Now, with the table with the loadings and the **_figure 10_**  we can easily conclude that:
+* **Component 1** exhibits a positive correlation with **cancer affection rate, cancer death rate, public health spending, and HDI**. Therefore, this component can effectively explain these variables.
+* **Component 2** shows a negative correlation with **hog_ideology_numeric**. Hence, this variable is inversely explained by this component.
+
+|   To summarize the PCA analysis, all countries were plotted using both components to understand how each country is distributed among the two components. This provides an initial insight into how the final clustering might appear.
+
+\newpage
+```{r, echo=F, fig.height=5, fig.align='center', fig.cap="Countries and Principal Components. Distribution of countries, concerning both components."}
+# Countries regarding components
+pca_plot <- prcomp(df_cluster[, c("cancer_affection_rate", "cancer_death_rate", "public_health_spe", "hdi", "hog_ideology_numeric")], scale. = TRUE)
+plot(pca_plot$x[, 1], pca_plot$x[, 2], type = "n", xlab = "Comp. 1", ylab = "Comp. 2")
+text(pca_plot$x[, 1], pca_plot$x[, 2], labels = df_cluster[,1], col = "black", cex = 0.5, pos = 4)
+abline(h=0, v=0, col="black")
+```
+
+|   It is important to explain how **_figure 11_** can be interpreted:
+* **Component 1:** Countries positioned on the **right side** of the x-axis are associated with **high levels of HDI, public health spending, and cancer affection/deaths**. Conversely, countries on the **left side are linked to lower levels of these variables**.
+* **Component 2:** Countries situated on the **upper side** of the y-axis tend to have had **more left-wing parties** governing them. Conversely, countries on the **lower side tend to have had more right-wing parties** governing them.
+
+|   So with these new information, it was decided that, to avoid multicollinearity, a new dataset was going to be created, taking into account the two first components. This new dataset was called **pca_results**.
+
+```{r, echo=F}
+pca_results <- as.data.frame(pca_base$scores)
+pca_results <- cbind(df_cluster[, 1, drop = FALSE], pca_results)
+pca_results <- pca_results[,c(1:3)]
+```
+
+## _Clustering_
+
+|   For this section, there were two techniques in mind for clustering:
+* **Hierarchical clustering:** This method is well-suited for forming groups where objects within a group share similarities and are distinct from objects in other groups. In this scenario, countries will be compared based on their positions in the two components.
+* **K-mean clustering:** In this approach, each group is represented by a centroid, which is the average position of all the data points in that cluster. This method aids in clustering by associating each object with the closest centroid, considering the lowest distance between them. Also in this case, centroids and clustering will be done using the two components.
+
+\newpage
+|   Before applying each clustering method, an evaluation of clustering results was conducted, using different **scoring methods**, to determine the **best clustering technique**, and to gain insight into the **appropriate number of clusters** to establish.
+
+```{r, echo=F}
+rownames(pca_results) <- 1:nrow(pca_results)
+
+clmethods <- c("hierarchical", "kmeans", "pam")
+validation_pca <- clValid(pca_results[c(2:3)], 2:6, clMethods = clmethods, validation="internal")
+
+summary(validation_pca)
+```
+
+|   To understand these results, it is important to describe what each method represents:
+* **Connectivity:** Indicates the degree of connectedness of the clusters. Higher values indicate better connectivity within clusters, meaning that points within the same cluster are closer to each other compared to points in different clusters.
+* **Dunn:** Measure of the compactness and separation between clusters. Higher values indicate better-defined and wellseparated clusters.
+* **Silhouette:** Evaluates the quality of clustering by measuring how similar an object is to its own cluster compared to other clusters. Ranges from -1 to 1, and values close to 1 indicate that the data points are well-clustered and closer to other points in the same cluster than to points in neighboring clusters.
+
+|   With that said, the original plan of **utilizing hierarchical and k-means methods remains consistent**. For **hierarchical clustering, 2 and 6 clusters were employed,** while for **K-means**, although k=2 is optimal according to the cvalid output, it was **also analyzed between k=2 and k=6**.
+
+|   Additionally, supplementary plotting methods were employed to justify the chosen number of clusters. Two techniques were employed:
+1. **Elbow method:** This technique operates under the notion that as the number of clusters increases, the fit improves up to a certain point. Beyond this point, further clusters may lead to over-fitting, resulting in a decline in performance. The optimal number of clusters is determined by identifying the "elbow" point on the plot, indicating where additional clusters no longer significantly enhance the fit.
+2. **Silhouette method:** As previously explained, the silhouette value should be maximized, indicating optimal clustering. Hence, the highest point on the silhouette plot denotes the ideal number of clusters.
+
+```{r, echo=F, fig.width=10, fig.height=3, fig.align='center', fig.cap="Elbow and Silhouette Methods. These plots show the optimal number of clusters as k=2."}
+
+# Elbow method
+elbow <- fviz_nbclust(pca_results[,c(2:3)], FUNcluster = hcut, method = "wss")
+
+# Silhouette method
+silhouette <- fviz_nbclust(pca_results[,c(2:3)], FUNcluster = hcut, method = "silhouette")
+
+grid.arrange(elbow, silhouette, ncol=2)
+```
+
+
+\newpage
+### _Hierarchical Clustering_
+
+|   For this method, taking into account the previous analysis, the number of clusters that were selected and compared are:
+* **k=2** taking into account both the evaluation of clustering results and the plots.
+* **k=6** taking into account the evaluation of clustering results.
+
+```{r, echo=F}
+# Number of clusters
+k_2 <- 2
+k_4 <- 4
+k_6 <- 6
+```
+
+|   Before implementing the clustering, an analysis of the linkage methods used in hierarchical clustering was done to determine which one is the optimal to use:
+* **Single:** Computes the minimum distance between clusters before merging them. May be sensitive to noise in the data.
+```{r, echo=F}
+# Single
+H.fit_single_pca <- hclust(dist(pca_results[,c(2:3)], method = "euclidean"), method = "single")
+single_cluster_pca <- cutree(H.fit_single_pca, k_2)
+cat("k=2: ", mean(silhouette(single_cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+```{r, echo=F}
+# Single
+H.fit_single_pca <- hclust(dist(pca_results[,c(2:3)], method = "euclidean"), method = "single")
+single_cluster_pca <- cutree(H.fit_single_pca, k_6)
+cat("k=6: ", mean(silhouette(single_cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+
+* **Complete:** Computes the maximum distance between clusters before merging them. May be sensitive to outliers.
+```{r, echo=F}
+#Complete
+H.fit_complete_pca <- hclust(dist(pca_results[,c(2:3)], method = "euclidean"), method = "complete")
+complete_cluster_pca <- cutree(H.fit_complete_pca, k_2)
+cat("k=2: ", mean(silhouette(complete_cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+```{r, echo=F}
+#Complete
+H.fit_complete_pca <- hclust(dist(pca_results[,c(2:3)], method = "euclidean"), method = "complete")
+complete_cluster_pca <- cutree(H.fit_complete_pca, k_6)
+cat("k=6: ", mean(silhouette(complete_cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+
+* **Average:** Computes the average distance between clusters before merging them. This method is less sensitive to outliers and tends to produce more balanced cluster sizes.
+```{r, echo=F}
+# Average
+H.fit_average_pca <- hclust(dist(pca_results[,c(2:3)], method = "euclidean"), method = "average")
+average_cluster_pca <- cutree(H.fit_average_pca, k_2)
+cat("k=2: ", mean(silhouette(average_cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+```{r, echo=F}
+# Average
+H.fit_average_pca <- hclust(dist(pca_results[,c(2:3)], method = "euclidean"), method = "average")
+average_cluster_pca <- cutree(H.fit_average_pca, k_6)
+cat("k=6: ", mean(silhouette(average_cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+
+|   Following this analysis, **hierarchical clustering was performed using the average linkage method**, as it consistently yielded superior results across all cases, indicating better-defined clusters.
+
+\newpage
+### _Dendogram_
+
+```{r, echo=F, fig.width=10, fig.align='center', fig.cap="Dendogram. It was plotted using the average linkage method, with the red clustering representing k=2, the green representing k=3, and the blue representing k=6."}
+
+plot(H.fit_average_pca, labels = pca_results$code, cex = 0.5, main=NULL)
+
+# draw dendogram with borders around the clusters
+rect.hclust(H.fit_average_pca, k=k_2, border="purple")
+rect.hclust(H.fit_average_pca, k=k_6, border="darkblue")
+```
+
+|   Based on the dendrogram in **_figure 13_** and the evaluation of clustering results, it's determined that the two ideal numbers of clusters are **k=2 and k=6**. To make a final comparison, **density plots** were generated to determine the optimal number of clusters for this dataset.
+
+```{r, echo=F}
+average_2cluster_pca <- cutree(H.fit_average_pca, k_2)
+
+# Add number of hierarchical clusters to a new dataFrame
+hierachical_cluster_result <- pca_results
+
+hierachical_cluster_result$hierarchical_cluster_k2 <- as.factor(average_2cluster_pca)
+
+hierachical_cluster_result$hierarchical_cluster_k6 <- as.factor(average_cluster_pca)
+```
+
+```{r, echo=F, fig.width=10, fig.height=3, fig.align='center', fig.cap="Clusters' Density. Plots of the two clusters' density, regarding the two components."}
+# Cluster 1
+cluster_1 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k2 == 1,]
+
+k2_cluster1 <- ggplot(data=cluster_1) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 1",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+# Cluster 2
+cluster_2 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k2 == 2,]
+
+k2_cluster2 <- ggplot(data=cluster_2) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 2",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+grid.arrange(k2_cluster1, k2_cluster2, ncol=2)
+```
+
+|   In **_figure 14_**, there is a noticeable distinction between both clusters concerning the two components:
+* **Cluster 1:** Typically exhibits **negative values for component 1**, indicating a low level of public health spending, HDI, and cancer rates. Conversely, it tends to have **positive values for component 2**, suggesting that these countries often have had more left-wing parties governing them.
+* **Cluster 2:** Generally displays **positive values for component 1**, indicating a high level of public health spending, HDI, and cancer rates. However, it tends to have a more **neutral stance regarding ideologies**, possibly associated with a centrist ideology.
+
+|   However, it's imperative to conduct a similar analysis with k=6 clustering to determine the optimal number of clusters. This is why the same graphs were plotted for comparison.
+
+\newpage
+```{r, echo=F, fig.width=10, fig.height=5, fig.align='center', fig.cap="Clusters' Density. Plots of the six clusters' density, regarding the two components."}
+# Cluster 1
+clusterk6_1 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k6 == 1,]
+
+k6_cluster1 <- ggplot(data=clusterk6_1) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 1",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+# Cluster 2
+clusterk6_2 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k6 == 2,]
+
+k6_cluster2 <- ggplot(data=clusterk6_2) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 2",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+# Cluster 3
+clusterk6_3 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k6 == 3,]
+
+k6_cluster3 <- ggplot(data=clusterk6_3) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 3",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+# Cluster 4
+clusterk6_4 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k6 == 4,]
+
+k6_cluster4 <- ggplot(data=clusterk6_4) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 4",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+# Cluster 5
+clusterk6_5 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k6 == 5,]
+
+k6_cluster5 <- ggplot(data=clusterk6_5) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 5",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+# Cluster 6
+clusterk6_6 <- hierachical_cluster_result[hierachical_cluster_result$hierarchical_cluster_k6 == 6,]
+
+k6_cluster6 <- ggplot(data=clusterk6_6) +
+  geom_density(aes(x = Comp.1, fill = "PCA_1"), alpha = 0.4) +
+  geom_density(aes(x = Comp.2, fill = "PCA_2"), alpha = 0.4) +
+  scale_fill_manual(values = c("darkorchid1", "darkgoldenrod1"), name = "Components") +
+  labs(title = "Cluster 6",
+       x = "Components values",
+       y = "Density") +
+  theme_minimal()
+
+grid.arrange(k6_cluster1, k6_cluster2, k6_cluster3, k6_cluster4, k6_cluster5, k6_cluster6, nrow=3, ncol=2)
+```
+
+|   Taking into account the results from **_figure 15_** and the dataset's complexity, it seems that a **k=6 clustering would be better suited to effectively cluster countries**. This is evident from the **distinct characteristics** exhibited by each cluster in the plot, which are not adequately represented with k=2. However, it's essential to acknowledge that increasing the number of clusters can lead to overfitting, that is why no greater k was selected.
+
+
+## _K-Means_
+
+|   Last but not least, **k-means clustering** was performed to partition the observations into a predetermined number of clusters using the PCA results.
+
+|   This method differs from hierarchical clustering in that we **predefine the number of clusters in advance**, whereas in hierarchical clustering, the number of clusters is determined after generating the tree representation. In this case, k-means calculates **centroids** for each cluster and minimizes the **within-cluster sum of squares (WCSS)**, which represents the total squared distance between each data point and the centroid.
+
+|   As mentioned earlier, k=2 and k=6 were used for this method. It was essential to assess the effectiveness of the selected k by using the **mean silhouette width**, where a greater value indicated better clustering quality. For better understanding, the analysis was conducted between 2 and 6, including 3, 4, and 5, for comparative purposes
+
+```{r, echo=F}
+kmean_2 <- 2
+kmean_3 <- 3
+kmean_4 <- 4
+kmean_5 <- 5
+kmean_6 <- 6
+
+k_mean_pca_2 <- kmeans(pca_results[,c(2:3)], centers=kmean_2, nstart=25)
+cat("k=2: ", mean(silhouette(k_mean_pca_2$cluster, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+
+k_mean_pca_3 <- kmeans(pca_results[,c(2:3)], centers=kmean_3, nstart=25)
+cat("k=3: ", mean(silhouette(k_mean_pca_3$cluster, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+
+k_mean_pca_4 <- kmeans(pca_results[,c(2:3)], centers=kmean_4, nstart=25)
+cat("k=4: ", mean(silhouette(k_mean_pca_4$cluster, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+
+k_mean_pca_5 <- kmeans(pca_results[,c(2:3)], centers=kmean_5, nstart=25)
+cat("k=5: ", mean(silhouette(k_mean_pca_5$cluster, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+
+k_mean_pca_6 <- kmeans(pca_results[,c(2:3)], centers=kmean_6, nstart=25)
+cat("k=6: ", mean(silhouette(k_mean_pca_6$cluster, dist(pca_results[,c(2:3)]))[, "sil_width"]), "\n")
+```
+
+\newpage
+|   The mean silhouette width of 0.50 for k=2 was considered sufficiently good and better than the other values of k. Nevertheless, this is was not considered a sufficient argument for choosing 2 as the best k. Additionally, it was also compared the "within cluster sum of squares by cluster" to determine if it has a sufficient proportion of data variability explained by the cluster structure.:
+
+```{r, echo=F}
+cat("k=2:", "\n")
+cat("WCSS = ", k_mean_pca_2$withinss, "\n")
+cat("Between SS / Total SS = ", k_mean_pca_2$betweens / k_mean_pca_2$totss, "\n")
+
+cat("k=3:", "\n")
+cat("WCSS = ", k_mean_pca_3$withinss, "\n")
+cat("Between SS / Total SS = ", k_mean_pca_3$betweens / k_mean_pca_3$totss, "\n")
+
+cat("k=4:", "\n")
+cat("WCSS = ", k_mean_pca_4$withinss, "\n")
+cat("Between SS / Total SS = ", k_mean_pca_4$betweens / k_mean_pca_4$totss, "\n")
+
+cat("k=5:", "\n")
+cat("WCSS = ", k_mean_pca_5$withinss, "\n")
+cat("Between SS / Total SS = ", k_mean_pca_5$betweens / k_mean_pca_5$totss, "\n")
+
+cat("k=6:", "\n")
+cat("WCSS = ", k_mean_pca_6$withinss, "\n")
+cat("Between SS / Total SS = ", k_mean_pca_6$betweens / k_mean_pca_6$totss, "\n")
+```
+
+|   During this analysis, **a new k** was selected based on the WCSS output, leading to new conclusions:
+* **k=4** logically exhibits more compact clusters, with distances between data points and their centroids lower than k=2.
+* **k=4** also achieves a BSS/TSS ratio of 81%, suggesting it is a good fit as it explains a sufficient proportion of data variability, unlike k=2 and k=3, which yielded lower values.
+* It is important to remember that increasing k may lead to overfitting of the model.
+
+\newpage
+|   In conclusion, taking into account all the previous analysis and this new information, it was defined that **k=4 should be the number of clusters to use in the k-means model**. **_Figure 16_** illustrates this results:
+
+```{r, echo=F, fig.width=10, fig.height=5, fig.align='center', fig.cap="K-Mean Clusters. This plot represents the 2 clusters created with this method."}
+set.seed(123) # Set Seed for Reproducibility
+
+df_kmean_pca <- pca_results
+
+rownames(df_kmean_pca) <- df_kmean_pca$code
+
+df_kmean_pca$cluster <- as.factor(k_mean_pca_4$cluster)
+
+fviz_cluster(list(data=df_kmean_pca[,c(2:3)],cluster=df_kmean_pca$cluster), repel = TRUE, labelsize = 6)
+```
+
+***
+
+\newpage
+# Supervised Learning
+
+|   For this analysis, **linear regression, decision tree, and random forest models** were utilized to further explore the dataset. Additional variables were introduced to enhance the comprehension and prediction of the dependent variable, which, in this case, was **cancer_death_rate**.
+
+|   Before implementing any model, certain data manipulations were conducted to streamline the variables:
+* **rate_50_over:** All columns representing age ranges were consolidated into this single column, which indicates the percentage of deaths among individuals over 50. This decision was informed by the original density plot, which notably highlighted a higher prevalence of cancer-related deaths within this age group.
+
+* **main_cancers:** The multitude of cancer type columns were replaced by a single column representing the five primary cancer types. These main cancers, aligned with the World Health Organization's 2019 rankings, comprise lungs, breast, prostate, rectum, and stomach cancers.
+
+```{r, echo=F}
+# New variable 50 and over for age.
+d_cancer_age$rate_50_over <- (d_cancer_age$age50_69+d_cancer_age$age70_over)/d_cancer_age$total_sum
+
+# Just use the main cancers (according to WHO): lungs, breast, colorectal, prostate and stomach.
+d_cancer_type$main_cancers <- (d_cancer_type$tracheal_bronch_lung + d_cancer_type$breast + d_cancer_type$colon_rectum +
+                                 d_cancer_type$prostate + d_cancer_type$stomach)/d_cancer_type$total_sum
+
+df_supervised <- merge(df_project, d_cancer_age, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "cancer_affection_rate", "cancer_death_rate", "rate_50_over",
+         "public_health_spe", "hdi", "hog_ideology", "hog_ideology_numeric")
+
+df_supervised <- merge(df_supervised, d_cancer_type, by = c("entity", "code", "year"), all.x = TRUE) %>%
+  select("entity", "code", "year", "cancer_affection_rate", "cancer_death_rate", "rate_50_over", "main_cancers",
+         "public_health_spe", "hdi", "hog_ideology_numeric")
+```
+
+|   Furthermore, the correlation among variables was checked, to avoid mutlicolineality in the models:
+```{r, echo=F, fig.align='center', fig.cap="Correlation Heatmap. Correlation between independent variables, showing multicolineality."}
+corr_sup_matrix <- cor(df_supervised[,c(4, 6:10)] %>% dplyr::select_if(is.numeric))
+
+ggcorrplot(corr_sup_matrix, type = "lower", outline.color = "white", lab = TRUE, colors = c("darkred","#FFFFE0","darkblue"))
+```
+
+|   In this case, as there is clear **multicollinearity among independent variables** in the **_figure 17_**, it was decided to apply **PCA and use the components for the regression**. The first two components were selected, as they explain almost the 80% of the dataset's variance:
+
+```{r, echo=F}
+sup_autoval <- eigen(corr_sup_matrix)
+
+sup_pca <-princomp(df_supervised[,c(4, 6:10)], cor=TRUE)
+summary(sup_pca)
+
+first_two_components <- predict(sup_pca, newdata = df_supervised[, c(4, 6:10)])[, 1:2]
+
+df_sup_pca <- cbind(df_supervised, first_two_components)
+```
+
+|   **The first component explains all variables except ideology**, while **component 2 explains ideology**. These results were sufficient for analyzing the project's objective, so two columns were added with the component's values for each row.
+
+```{r, echo=F}
+sup_pca$loadings
+
+first_two_components <- predict(sup_pca, newdata = df_supervised[, c(4, 6:10)])[, 1:2]
+
+df_sup_pca <- cbind(df_supervised, first_two_components)
+```
+
+## _Regression model_
+
+|   The **regression model** serves as a mathematical tool for predicting the value of a variable based on the values of other variables. The variable being predicted is called the **dependent variable**, while the variables used to predict it are known as **independent variables**. This analytical approach involves estimating the **coefficients** of a linear equation, incorporating one or more independent variables to best predict the value of the dependent variable.
+
+|   For this project, two regression models were compared to determine the superior fit:
+* **Original dataset:** Utilizing the original dataset alongside the results obtained from PCA.
+* **Average by country:** Employing the average of each variable, aggregated by country, also integrating PCA.
+
+|   While both models exhibited adequacy and similarity, the preference in this project was given to the **average approach**, as in the unsupervised learning section. Utilizing the original dataset treats each country/year combination as separate samples, potentially overlooking the effects across years under the governance of the same administration. Therefore, **employing the average allows for the inclusion of the effects of ideological tendencies and cancer/health outcomes over the years**, enriching the model with a more comprehensive temporal perspective.
+
+|   Taking into account the considerations mentioned previously, and bearing in mind that component 1 explains all variables except ideology, while component 2 explains ideology, the following linear regression model was constructed:
+
+```{r, echo=F}
+# PCA calculation and further manipulation
+df_supervised_avg <- aggregate(. ~ code, data = df_supervised, FUN = mean)
+
+df_supervised_avg <- df_supervised_avg[c(1, 4:10)]
+
+corr_sup_avg_matrix <- cor(df_supervised_avg[,c(2, 4:8)] %>% dplyr::select_if(is.numeric))
+
+sup_avg_autoval <- eigen(corr_sup_avg_matrix)
+
+sup_avg_pca <-princomp(df_supervised_avg[,c(2, 4:8)], cor=TRUE)
+
+avg_first_two_components <- predict(sup_avg_pca, newdata = df_supervised_avg[, c(2, 4:8)])[, 1:2]
+
+df_sup_avg_pca <- cbind(df_supervised_avg, avg_first_two_components)
+
+# Regression
+avg_linear_reg_model<- lm(cancer_death_rate ~ Comp.1 + Comp.2, data = df_sup_avg_pca)
+
+summary(avg_linear_reg_model)
+```
+
+\newpage
+|   In addition, several metrics were examined to analyze the effectiveness of the selected model:
+```{r, echo=F}
+avg_predictions <- predict(avg_linear_reg_model, newdata=df_sup_avg_pca)
+avg_residuals <- df_sup_avg_pca$cancer_death_rate-avg_predictions
+
+R2_avg = R2(avg_predictions, df_sup_avg_pca$cancer_death_rate)
+RMSE_avg = RMSE(avg_predictions, df_sup_avg_pca$cancer_death_rate)  
+MAE_avg = MAE(avg_predictions, df_sup_avg_pca$cancer_death_rate)
+
+cat("R^2 =", R2_avg, "\n")
+cat("RMSE =", RMSE_avg, "\n")
+cat("MAE =", MAE_avg, "\n")
+```
+```{r, echo=F, fig.align=', center', fig.cap="Normal Q-Q Plot. ."}
+qqnorm(avg_residuals)
+qqline(avg_residuals)
+```
+
+|   The results of the regression model indicate its **effectiveness in predicting cancer deaths**, as it explains 86% of the variance and demonstrates a **lower RMSE**. Additionally, the **residuals** exhibit a good fit to a **normal distribution**, as illustrated in  **_figure 18_**.
+
+|   Furthermore, in alignment with the project's objective, the **insignificance of the second component** suggests that there is **no significant effect of ideology** on the dependent variable.
+
+
+## _Decision Tree_
+
+|  Continuing with the supervised techniques, an analysis involving **decision trees** was conducted. Decision trees are a type of decision support model that provides a **hierarchical structure of decisions and their potential outcomes**.
+
+|   This hierarchical, tree structure, consists of:
+* **Root node:** The first node, from which all branches originate.
+* **Branches:** This are lines connecting nodes. They represent the possible decisions or outcomes based on the value of a particular feature. Each branch leads to a subsequent node or leaf node.
+* **Internal nodes:** Are decision nodes within the decision tree that contain a decision rule based on a feature or attribute. These nodes split the dataset into smaller subsets.
+* **Leaf nodes:** This are the final nodes. They represent the final outcome or decision.
+
+|   For this technique, the results of the entire dataset **_df_supervised_** were compared against those of the dataset with the annual averages by country (**_df_supervised_avg_**):
+
+**_df_supervised:_**
+```{r, echo=F}
+cat("Model's performance:", "\n")
+set.seed(123)
+partition = createDataPartition(df_supervised$cancer_death_rate, p = 0.70, list = FALSE)
+train_set = df_supervised[partition, ]  
+test_set = df_supervised[-partition, ]
+
+train_tree = rpart(cancer_death_rate ~ hog_ideology_numeric+cancer_affection_rate+main_cancers+public_health_spe+hdi,
+                   data = train_set)
+
+printcp(train_tree)
+
+prediction = predict(train_tree, test_set)
+
+r_2 <- (prediction - test_set$cancer_death_rate)^2
+
+mse <- mean(r_2)
+
+cat("RSME =", RMSE(prediction, test_set$cancer_death_rate), "\n")
+
+cat("Accuracy = ", 1 - mse / var(test_set$cancer_death_rate), "\n")
+```
+
+|   Considering the preceding results, a **complexity parameter (CP) value of 0.01** was selected for constructing the tree, resulting in the following outcomes:
+```{r, echo=F}
+cat("Model's cross validation:", "\n")
+train_control <- trainControl(method = "repeatedcv",
+                              number = 10,
+                              repeats = 10)
+
+tune_grid = expand.grid(cp=c(0.01))
+
+validated_tree <- train(cancer_death_rate ~ hog_ideology_numeric+cancer_affection_rate+main_cancers+public_health_spe+hdi,
+                        data=df_supervised,
+                        method="rpart",
+                        trControl= train_control,
+                        tuneGrid = tune_grid) 
+
+validated_tree
+```
+
+\newpage
+**_df_supervised_avg:_**
+```{r, echo=F}
+cat("Model's performance:", "\n")
+set.seed(123)
+partition_2 = createDataPartition(df_supervised_avg$cancer_death_rate, p = 0.70, list = FALSE)
+train_set_2 = df_supervised_avg[partition_2, ]  
+test_set_2 = df_supervised_avg[-partition_2, ]
+
+train_tree_2 = rpart(cancer_death_rate ~ hog_ideology_numeric+cancer_affection_rate+main_cancers+public_health_spe+hdi,
+                   data = train_set_2)
+
+printcp(train_tree_2)
+
+prediction_2 = predict(train_tree_2, test_set_2)
+
+r_2_2 <- (prediction_2 - test_set_2$cancer_death_rate)^2
+
+mse_2 <- mean(r_2_2)
+
+cat("RSME =", RMSE(prediction_2, test_set_2$cancer_death_rate), "\n")
+
+cat("Accuracy = ", 1 - mse_2 / var(test_set_2$cancer_death_rate), "\n")
+```
+
+|   In this instance, taking into consideration the previous findings, once again a **CP value of 0.01** was chosen for constructing the new tree, yielding the following results:
+```{r, echo=F}
+cat("Model's cross validation:", "\n")
+train_control_2 <- trainControl(method = "repeatedcv", number = 10)
+
+tune_grid_2 = expand.grid(cp=c(0.01))
+
+validated_tree_2 <- train(cancer_death_rate ~ hog_ideology_numeric+cancer_affection_rate+main_cancers+public_health_spe+hdi,
+                        data=df_supervised_avg,
+                        method="rpart",
+                        trControl= train_control_2,
+                        tuneGrid = tune_grid) 
+
+validated_tree_2
+```
+
+|   Mainly, it is evident that the model utilizing the _df_supervised_avg_ dataset exhibited superior performance, characterized by a **lower RMSE and a higher accuracy**. Considering the "**_variables actually used in tree construction_**", it can be deduced from both models that once again **ideology does not significantly contribute to the prediction of cancer death**.
+
+\newpage
+|   Furthermore, despite one model outperforming the other, both decision trees were plotted to facilitate visual comparison. Nonetheless, for the project's objectives, the conclusion remains consistent:
+```{r, echo=F, fig.width = 10, fig.height=4, fig.align='center', fig.cap="Tree with supervised dataframe. The variables used were cancer affection rate, hdi and public health spending"}
+tree = rpart(cancer_death_rate ~ hog_ideology_numeric+cancer_affection_rate+main_cancers+public_health_spe+hdi,
+             cp=0.01, data = df_supervised)
+
+rpart.plot(tree)
+```
+
+```{r, echo=F, fig.width = 10, fig.height=4, fig.align='center', fig.cap="Tree with supervised avg dataframe. The variables used were cancer affection rate, hdi and public health spending."}
+tree_2 = rpart(cancer_death_rate ~ hog_ideology_numeric+cancer_affection_rate+main_cancers+public_health_spe+hdi,
+                   cp=0.01, data = df_supervised_avg)
+
+rpart.plot(tree_2)
+```
+
+\newpage
+
+## _Random Forest_
+
+|   Last but not least, a **random forest** analysis was done. This model **combines the output of multiple decision trees to reach a single result**. The main difference to decision tree is that employs a technique called **Bootstrap Aggregating (Bagging)**, where multiple decision trees are trained on different subsets of the training data (educing overfitting and increasing generalization performance), and uses a **random** subset of features at each split in the decision tree.
+
+|   To define the best model, it was compared a model with the **_df_supervised_**, **_df_supervised_** without the ideology variable, and **_df_supervised_avg_**:
+
+```{r, echo=F}
+cat("Model with df_supervised:", "\n")
+rf_cancer_data <- randomForest(cancer_death_rate ~ cancer_affection_rate+main_cancers+public_health_spe+hdi+hog_ideology_numeric,
+                        data=train_set, ntree=1000, importance = TRUE)
+
+rf_cancer_data
+
+cat("Model with df_supervised (w/o ideology):", "\n")
+rf_cancer_data_woideo <- randomForest(cancer_death_rate ~ cancer_affection_rate+main_cancers+public_health_spe+hdi,
+                               data=train_set, ntree=1000, importance = TRUE)
+
+rf_cancer_data_woideo
+
+cat("Model with df_supervised_avg:", "\n")
+rf_cancer_data_avg <- randomForest(cancer_death_rate ~ cancer_affection_rate+main_cancers+public_health_spe+hdi+hog_ideology_numeric,
+                               data=train_set_2, ntree=1000, importance = TRUE)
+
+rf_cancer_data_avg
+```
+
+|   According to the results, the model with **_df_supervised_** without ideology ouputted the best result, but for the project's purpose, the analysis was continued with the model including **_df_supervised_** as it had a better performance than **_df_supervised_avg_**.
+
+|   Finally, this random forest was used for creating a **training random forest with 10 fold cross validation and with the ranger package**:
+
+\newpage
+* **Random forest with 10 fold cross validation:**
+```{r, echo=F}
+rf_fit<-train(cancer_death_rate ~ cancer_affection_rate+main_cancers+public_health_spe+hdi+hog_ideology_numeric,
+              data=train_set, method="rf",n_estimators=1000, 
+              importance=TRUE, trControl=trainControl(method = "cv", number=10))
+
+rf_predict <- predict(rf_fit$finalModel, test_set)
+compare_rf <- data.frame(test_set$cancer_death_rate,rf_predict)
+rf_RMSE <- sqrt(mean((test_set$cancer_death_rate - rf_predict)^2))
+cat("rf_RMSE = ", rf_RMSE, "\n")
+
+varImp(rf_fit)
+```
+
+```{r, echo=F, fig.width=10, fig.height=5, fig.align='center', fig.cap="Increase in MSE and Node Purity."}
+varImpPlot(rf_fit$finalModel)
+```
+
+* **Random forest with ranger package:**
+```{r, echo=F}
+ranger_fit<-train(cancer_death_rate ~ cancer_affection_rate+main_cancers+public_health_spe+hdi+hog_ideology_numeric,
+                  data=train_set, method="ranger", num.trees = 1000, importance="impurity",
+                  trControl=trainControl(method = "cv", number=10))
+
+ranger_predict <- predict(ranger_fit, test_set)
+ranger_RMSE <- sqrt(mean((test_set$cancer_death_rate - ranger_predict)^2))
+cat("rf_RMSE = ", ranger_RMSE, "\n")
+
+varImp(ranger_fit)
+```
+
+\newpage
+|   Finally, considering all these results, **the project's objective remains supported**. Although both models (10-fold cross-validation and the raner package) yielded similar **RMSE** values, some differences in the **importance of each variable** were observed. However, one aspect is clear: **ideology demonstrates no significant impact on cancer deaths**.
+
+|   Furthermore, as depicted in **_figure 21_**, it is evident that **all variables except ideology** are deemed important (**%IncMSE**) and contribute to enhancing the model (**IncNodePurity**). To clarify these concepts:
+* **%IncMSE:** This metric quantifies the importance of variables in the model by indicating how much the model's mean squared error (MSE) would increase if that variable were eliminated. **A higher value signifies greater importance of the variable**.
+* **IncNodePurity:** This metric measures the improvement in the purity of nodes in the decision tree when a variable is added at a specific point. **A higher value indicates a greater improvement in the decision tree's purity upon splitting**.
+
+|   These metrics provide valuable insights into the significance and contribution of each variable to the model's performance and overall predictive accuracy.
+
+***
+
+\newpage
+# Conclusion
+|   To conclude this project, it's essential to highlight that **the objective was strongly supported by the results obtained ** from both unsupervised and supervised techniques. These results demonstrate that **political ideologies do not significantly affect cancer deaths, whereas variables such as public health spending and the Human Development Index (HDI) play crucial roles.**.
+
+|   However, further analysis is highly recommended:
+* **New independent variables:** While cancer deaths were chosen due to the substantial investments it necessitates, additional variables may provide deeper insights. Variables such as family income, lifestyle choices (e.g., healthy habits, physical activity, smoking), and personal health insurance could be included to enrich the analysis.
+* **Different perspective of the ideology variable:** Exploring the project from a different angle, such as analyzing the entire tenure of each political party rather than focusing solely on yearly or annual averages, could offer alternative insights. This approach acknowledges that the effects of political decisions may take time to materialize.
+* **Change the dependent variable (cancer_death_rate):** This project could be reexamined from a different perspective, aiming to demonstrate that regardless of the governing ideology, a country's progress hinges on tangible actions rather than rhetoric. Variables such as education level, employment rate, entrepreneurship rate, etc., could be considered as alternative dependent variables.
+
+|   As previously emphasized, this project is not intended to engage in political debates or persuade individuals to alter their political beliefs. Instead, its primary aim is to show that **actions speak louder than words, and true change is brought about by leading through example.**.
+

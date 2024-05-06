@@ -6,7 +6,7 @@ Numero de personas con cancer 1990-2017: https://ourworldindata.org/grapher/numb
 
 Muertes por tipo de cancer por país 1990-2019: https://ourworldindata.org/grapher/total-cancer-deaths-by-type?tab=table
 
-Muertes por cancer por edad: https 1990-2019://ourworldindata.org/grapher/cancer-deaths-by-age?tab=table&time=earliest..2019
+Muertes por cancer por edad:  https://ourworldindata.org/grapher/cancer-deaths-by-age
 
 Human Development Index 1990 - 2021: https://ourworldindata.org/grapher/human-development-index?tab=table
 
