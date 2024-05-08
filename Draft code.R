@@ -387,9 +387,9 @@ number_by_ideology <- data.frame(
   Center = sum(df_project$hog_ideology == "centrist"),
   Right = sum(df_project$hog_ideology == "rightist"))
 
-ideology_numbers <- barplot(as.numeric(unlist(number_by_ideology)), col = c("red", "#FFFFE0", "blue") , width = c(50, 50), las=2, space = 1,
+ideology_numbers <- barplot(as.numeric(unlist(number_by_ideology)), col = c("coral", "#FFFFE0", "cornflowerblue") , width = c(50, 50), las=1, space = 1,
         names.arg= c("Left", "Center", "Right"), cex.names=0.75,
-        main = "Number of records by ideology", ylab = "N° of records", xlab = "Ideology",
+        main = "Number of records by ideology", ylab = "N° of records",
         ylim = c(0, 1370))
 text(ideology_numbers, y = number_by_ideology-100, paste(unlist(number_by_ideology), sep = ""), cex = 1, col = "black")
 plot_limits <- par("usr")
@@ -401,9 +401,10 @@ spe_by_ideology <- data.frame(
   Center = mean(df_project$public_health_spe[df_project$hog_ideology == "centrist"]),
   Right = sum(mean(df_project$public_health_spe[df_project$hog_ideology == "rightist"])))
 
-ideology_spe <- barplot(as.numeric(unlist(spe_by_ideology)), col = c("red", "#FFFFE0", "blue") , width = c(50, 50), las=2, space = 1,
+ideology_spe <- barplot(as.numeric(unlist(spe_by_ideology)), col = c("coral", "#FFFFE0", "cornflowerblue") , width = c(50, 50), las=1, space = 1,
                             names.arg= c("Left", "Center", "Right"), cex.names=0.75,
-                            main = "Avg. Spending in Public Health by Ideology", ylab = "Public Health Spending (% from GPD)", xlab = "Ideology")
+                            main = "Avg. Spending in Public Health by Ideology", ylab = "Public Health Spending (% from GPD)",
+                        ylim = c(0, 3.75))
 text(ideology_spe, y = unlist(spe_by_ideology) - 0.15, labels = round(unlist(spe_by_ideology), 2), col = "black")
 plot_limits <- par("usr")
 rect(plot_limits[1], plot_limits[3], plot_limits[2], plot_limits[4], border = "black", lwd = 2)
@@ -414,9 +415,10 @@ cdeath_by_ideology <- data.frame(
   Center = mean(df_project$cancer_death_rate[df_project$hog_ideology == "centrist"]),
   Right = sum(mean(df_project$cancer_death_rate[df_project$hog_ideology == "rightist"])))
 
-ideology_cdeath <- barplot(as.numeric(unlist(cdeath_by_ideology)), col = c("red", "#FFFFE0", "blue") , width = c(50, 50), las=2, space = 1,
+ideology_cdeath <- barplot(as.numeric(unlist(cdeath_by_ideology)), col = c("coral", "#FFFFE0", "cornflowerblue") , width = c(50, 50), las=1, space = 1,
                         names.arg= c("Left", "Center", "Right"), cex.names=0.75,
-                        main = "Avg. Cancer Death Rate by Ideology", ylab = "Cancer Death Rate", xlab = "Ideology")
+                        main = "Avg. Cancer Death Rate by Ideology", ylab = "Cancer Death Rate",
+                        ylim = c(0, 0.2))
 text(ideology_cdeath, y = unlist(cdeath_by_ideology) - 0.01, labels = round(unlist(cdeath_by_ideology), 2),
           col = "black")
 plot_limits <- par("usr")
@@ -428,9 +430,10 @@ hdi_by_ideology <- data.frame(
   Center = mean(df_project$hdi[df_project$hog_ideology == "centrist"]),
   Right = sum(mean(df_project$hdi[df_project$hog_ideology == "rightist"])))
 
-ideology_hdi <- barplot(as.numeric(unlist(hdi_by_ideology)), col = c("red", "#FFFFE0", "blue") , width = c(50, 50), las=2, space = 1,
+ideology_hdi <- barplot(as.numeric(unlist(hdi_by_ideology)), col = c("coral", "#FFFFE0", "cornflowerblue") , width = c(50, 50), las=1, space = 1,
                            names.arg= c("Left", "Center", "Right"), cex.names=0.75,
-                           main = "Avg. HDI by Ideology", ylab = "HDI", xlab = "Ideology")
+                           main = "Avg. HDI by Ideology", ylab = "HDI",
+                        ylim = c (0, 0.8))
 text(ideology_hdi, y = unlist(hdi_by_ideology) - 0.05, labels = round(unlist(hdi_by_ideology), 2),
      col = "black")
 plot_limits <- par("usr")
@@ -461,7 +464,7 @@ final_map_ideology <- merge(world, ideology_map, by.x = "sovereignt", by.y = "en
 
 ggplot(final_map_ideology, aes(fill = hog_ideology_numeric)) +
   geom_sf() +
-  scale_fill_gradient(low = "red", high = "blue", name = "Avg. ideology", limits = c(-1, 1)) +
+  scale_fill_gradient(low = "coral", high = "cornflowerblue", name = "Avg. ideology", limits = c(-1, 1)) +
   labs(title = "Anual average ideology by country")
 
 # Cancer death map
@@ -775,14 +778,14 @@ mean(silhouette(average_2cluster_pca, dist(pca_results[,c(2:3)]))[, "sil_width"]
 plot(H.fit_average, labels = df_cluster$code, cex = 0.6) # display dendogram
 
 # draw dendogram with borders around the clusters
-rect.hclust(H.fit_average_pca, k=k_2, border="red")
+rect.hclust(H.fit_average_pca, k=k_2, border="purple")
 rect.hclust(H.fit_average_pca, k=k_4, border="green")
-rect.hclust(H.fit_average_pca, k=k_6, border="blue") # From elbow method, k=3 was also an interesting option
+rect.hclust(H.fit_average_pca, k=k_6, border="darkblue") # From elbow method, k=3 was also an interesting option
 
 plot(H.fit_complete_pca, labels = pca_results$code, cex = 0.6)
-rect.hclust(H.fit_complete_pca, k=k_2, border="red")
+rect.hclust(H.fit_complete_pca, k=k_2, border="purple")
 rect.hclust(H.fit_complete_pca, k=k_4, border="green")
-rect.hclust(H.fit_complete_pca, k=k_6, border="blue")
+rect.hclust(H.fit_complete_pca, k=k_6, border="darkblue")
 
 # Add number of hierarchical clusters to a new dataFrame
 hierachical_cluster_result <- pca_results
@@ -1382,3 +1385,4 @@ varImp(ranger_fit)
 ranger_predict <- predict(ranger_fit, test_set)
 ranger_RMSE <- sqrt(mean((test_set$cancer_death_rate - ranger_predict)^2))
 ranger_RMSE #Similar to random forest
+
