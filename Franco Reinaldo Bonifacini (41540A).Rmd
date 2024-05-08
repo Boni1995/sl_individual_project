@@ -712,7 +712,7 @@ summary(validation_pca)
 ```
 
 |   To understand these results, it is important to describe what each method represents:
-* **Connectivity:** Indicates the degree of connectedness of the clusters. Higher values indicate better connectivity within clusters, meaning that points within the same cluster are closer to each other compared to points in different clusters.
+* **Connectivity:** Indicates the degree of connectedness of the clusters. Lower values indicate better connectivity within clusters, meaning that points within the same cluster are closer to each other compared to points in different clusters.
 * **Dunn:** Measure of the compactness and separation between clusters. Higher values indicate better-defined and wellseparated clusters.
 * **Silhouette:** Evaluates the quality of clustering by measuring how similar an object is to its own cluster compared to other clusters. Ranges from -1 to 1, and values close to 1 indicate that the data points are well-clustered and closer to other points in the same cluster than to points in neighboring clusters.
 
